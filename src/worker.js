@@ -26,6 +26,16 @@ export default {
       return handleNews(request, env, ctx);
     }
 
+    if (url.pathname === '/api/subscribe') {
+      return handleSubscribe(request, env);
+    }
+
+    // With html_handling = "none", assets are served at their literal path
+    // (so /journal.html etc. keep working). Map the bare root to index.html.
+    if (url.pathname === '/') {
+      return env.ASSETS.fetch(new Request(new URL('/index.html', url), request));
+    }
+
     // Static site (HTML, og-image.png, etc.)
     return env.ASSETS.fetch(request);
   },
@@ -94,6 +104,56 @@ async function handleNews(request, env, ctx) {
       'cache-control': 'no-store',
     });
   }
+}
+
+/**
+ * Newsletter signup. Stores the email in the SUBSCRIBERS KV namespace
+ * (free tier) so you own the list with zero cost and zero third-party
+ * account. Enable it once with:
+ *   npx wrangler kv namespace create SUBSCRIBERS
+ * then uncomment the [[kv_namespaces]] block in wrangler.toml.
+ *
+ * Until KV is bound, the route returns a clear "not configured" response
+ * instead of silently dropping signups.
+ */
+async function handleSubscribe(request, env) {
+  if (request.method !== 'POST') {
+    return jsonResponse({ ok: false, error: 'method_not_allowed' }, 405, {
+      'cache-control': 'no-store',
+    });
+  }
+
+  let email = '';
+  try {
+    const body = await request.json();
+    email = String((body && body.email) || '').trim().toLowerCase();
+  } catch (e) {
+    return jsonResponse({ ok: false, error: 'bad_request' }, 400, {
+      'cache-control': 'no-store',
+    });
+  }
+
+  // Basic validation — keep it simple and cheap.
+  const valid = email.length <= 254 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+  if (!valid) {
+    return jsonResponse({ ok: false, error: 'invalid_email' }, 422, {
+      'cache-control': 'no-store',
+    });
+  }
+
+  if (!env.SUBSCRIBERS) {
+    return jsonResponse({ ok: false, error: 'not_configured' }, 503, {
+      'cache-control': 'no-store',
+    });
+  }
+
+  // Key on the email so re-submits just upsert (natural dedupe).
+  await env.SUBSCRIBERS.put(
+    `sub:${email}`,
+    JSON.stringify({ email, ts: Date.now() }),
+  );
+
+  return jsonResponse({ ok: true }, 200, { 'cache-control': 'no-store' });
 }
 
 async function fetchFinnhub(category, key) {

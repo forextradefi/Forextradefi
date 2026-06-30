@@ -273,8 +273,8 @@
     </a>
     <div class="nav-links">
       <a href="#markets" class="hide-sm">Markets</a>
-      <a href="#free" class="hide-sm">What you get</a>
-      <a href="#follow" class="hide-sm">Follow</a>
+      <a href="/brokers.html">Brokers</a>
+      <a href="/playbook.html" class="hide-sm">Playbook</a>
       <a href="#tools" class="hide-sm">Tools</a>
       <a href="/journal.html" class="nav-cta">Journal</a>
     </div>
@@ -481,7 +481,7 @@
         <a href="https://instantfunding.com/?partner=7665" target="_blank" rel="noopener">View →</a>
       </div>
     </div>
-    <p class="tools-note">Honest note: I only list firms and tools I personally use. If that ever changes, this list changes.</p>
+    <p class="tools-note">Honest note: I only list firms and tools I personally use. If that ever changes, this list changes. <a href="/brokers.html" style="color:var(--blue-bright);font-weight:600">Compare all brokers &amp; prop firms →</a></p>
   </div>
 </section>
 
@@ -495,7 +495,7 @@
         <input type="email" id="email" placeholder="you@email.com" aria-label="Email address">
         <button id="subBtn">Get updates</button>
       </div>
-      <p class="form-note" id="formNote">No spam. Just gold. Connect this to your email tool (e.g. MailerLite) to go live.</p>
+      <p class="form-note" id="formNote">No spam. Just gold. Leave anytime.</p>
     </div>
   </div>
 </section>
@@ -517,8 +517,9 @@
         <span><span style="color:#fff">FOREX</span><span style="color:var(--blue)">TRADE</span><span style="color:#fff">FI</span></span>
       </div>
       <div class="foot-links">
+        <a href="/brokers.html">Brokers</a>
+        <a href="/playbook.html">Playbook</a>
         <a href="https://youtube.com/@forextradefi_ftf" target="_blank" rel="noopener">YouTube</a>
-        <a href="https://instagram.com/forextradefi" target="_blank" rel="noopener">Instagram</a>
         <a href="https://t.me/forextradeficommunitychat" target="_blank" rel="noopener">Telegram</a>
         <a href="#updates">Updates</a>
       </div>
@@ -605,16 +606,26 @@
   resize(); loop();
 })();
 
-// email capture (front-end stub)
+// email capture -> /api/subscribe (Worker stores it in KV)
 (function(){
   var btn=document.getElementById('subBtn'), inp=document.getElementById('email'), note=document.getElementById('formNote');
   if(!btn) return;
-  btn.addEventListener('click',function(){
+  function submit(){
     var v=(inp.value||'').trim();
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){ note.textContent='Enter a valid email to continue.'; note.style.color='#ff8088'; return; }
-    note.textContent='Thanks — you\'re on the list. (Hook this form up to your email tool to store it.)';
-    note.style.color='#5b9cff'; inp.value='';
-  });
+    btn.disabled=true; note.textContent='Adding you…'; note.style.color='#7d8aa3';
+    fetch('/api/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:v})})
+      .then(function(r){ return r.json().catch(function(){return {};}).then(function(d){ return {ok:r.ok&&d&&d.ok, err:d&&d.error}; }); })
+      .then(function(res){
+        if(res.ok){ note.textContent='You\'re on the list — talk soon. 👋'; note.style.color='#5b9cff'; inp.value=''; }
+        else if(res.err==='not_configured'){ note.textContent='Almost there — signups switch on once the list is connected.'; note.style.color='#7d8aa3'; }
+        else{ note.textContent='Couldn\'t add you right now — please try again in a bit.'; note.style.color='#ff8088'; }
+      })
+      .catch(function(){ note.textContent='Couldn\'t add you right now — please try again in a bit.'; note.style.color='#ff8088'; })
+      .finally(function(){ btn.disabled=false; });
+  }
+  btn.addEventListener('click',submit);
+  inp.addEventListener('keydown',function(e){ if(e.key==='Enter') submit(); });
 })();
 </script>
 <script>
