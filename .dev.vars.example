@@ -1,0 +1,4 @@
+# Copy to .dev.vars (gitignored) for `wrangler dev`.
+# In production this value is stored as a Worker secret instead:
+#   npx wrangler secret put FINNHUB_KEY
+FINNHUB_KEY=your_free_finnhub_key_here

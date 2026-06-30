@@ -1,0 +1,13 @@
+{
+  "name": "forextradefi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "forextradefi.com — vanilla HTML/CSS/JS site on Cloudflare Workers (static assets + /api/news route).",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
+}
