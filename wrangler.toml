@@ -1,0 +1,33 @@
+# Cloudflare Worker config for forextradefi.com
+#
+# Deploy:        npx wrangler deploy
+# Set news key:  npx wrangler secret put FINNHUB_KEY
+# Local dev:     npx wrangler dev   (then open http://localhost:8787)
+
+name = "forextradefi"
+main = "src/worker.js"
+compatibility_date = "2024-11-01"
+
+# Static site (index.html, journal.html, og-image.png, ...). The Worker falls
+# through to this binding for every request that isn't an /api/* route, so
+# https://forextradefi.com/og-image.png is served straight from here.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+# Serve files at their literal path (/journal.html, /brokers.html) with a 200
+# instead of redirecting to the extensionless URL, so existing internal links
+# keep working unchanged.
+html_handling = "none"
+
+# FINNHUB_KEY is a secret, NOT set here. Add it once with:
+#   npx wrangler secret put FINNHUB_KEY
+# (For `wrangler dev`, put it in a gitignored .dev.vars file instead.)
+
+# Newsletter signups (/api/subscribe) are stored in this free-tier KV
+# namespace. Enable it once:
+#   npx wrangler kv namespace create SUBSCRIBERS
+# then paste the printed id below and uncomment the block. Until then,
+# /api/subscribe returns "not_configured" instead of dropping signups.
+# [[kv_namespaces]]
+# binding = "SUBSCRIBERS"
+# id = "PASTE_KV_NAMESPACE_ID_HERE"
