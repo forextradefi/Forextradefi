@@ -318,6 +318,12 @@
     .cta-row .btn{width:100%;justify-content:center}
     .htrust{font-size:.72rem}
   }
+
+  /* economic calendar (Investing.com embed) */
+  .econcal{padding:0}
+  .econcal iframe{display:block;width:100%;border:0;background:#fff}
+  .econcal-by{font-size:.66rem;color:var(--muted);padding:8px 12px;font-family:'JetBrains Mono'}
+  .econcal-by a{color:var(--blue-bright)}
 </style>
 </head>
 <body>
@@ -435,12 +441,10 @@
         </div>
       </div>
       <div class="mk-panel">
-        <div class="mk-panel-h">Economic calendar <span class="mk-tag">Medium + high impact</span></div>
-        <div class="tradingview-widget-container">
-          <div class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
-          {"colorTheme":"dark","isTransparent":true,"locale":"en","countryFilter":"us,eu,gb,jp,ca,au","importanceFilter":"0,1","width":"100%","height":520}
-          </script>
+        <div class="mk-panel-h">Economic calendar <span class="mk-tag">This week</span></div>
+        <div class="econcal">
+          <iframe src="https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&amp;features=datepicker,timezone&amp;countries=25,32,6,37,72,22,17,39,14,10,35,43,56,36,110,11,26,12,4,5&amp;calType=week&amp;timeZone=55&amp;lang=1" width="100%" height="500" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" title="Economic calendar"></iframe>
+          <div class="econcal-by">Real-time economic calendar provided by <a href="https://www.investing.com/" rel="nofollow noopener" target="_blank">Investing.com</a>.</div>
         </div>
       </div>
     </div>
