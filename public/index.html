@@ -294,6 +294,30 @@
   .htrust b{color:var(--silver)}
   .reveal{animation:heroReveal .8s cubic-bezier(.2,.7,.2,1) both}
   @keyframes heroReveal{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+  /* ===== polish: hover-lift + scroll reveal + gold XAU + mobile hero ===== */
+  .mk-stat,.mk-panel,.tool{transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .25s,border-color .25s}
+  .mk-stat:hover,.tool:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,.45);border-color:var(--ring)}
+  .mk-panel:hover{border-color:var(--ring);box-shadow:0 14px 34px rgba(0,0,0,.4)}
+  .reveal-up{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+  .reveal-up.in{opacity:1;transform:none}
+  .mk-gold{border-color:rgba(231,184,78,.38)!important}
+  .mk-gold .mk-v{color:var(--gold)}
+  .mk-gold .mk-dot{background:var(--gold)!important}
+  .mk-gold:hover{border-color:rgba(231,184,78,.65)!important}
+  @media(prefers-reduced-motion:reduce){.reveal-up{opacity:1!important;transform:none!important;transition:none}}
+  @media(max-width:600px){
+    .hero-in{padding:32px 0 24px}
+    .hmark{width:72px;height:72px;margin-bottom:12px}
+    .heyebrow{font-size:.64rem;letter-spacing:2px;padding:6px 12px}
+    .htitle{font-size:clamp(2.1rem,11vw,3rem);margin-top:16px}
+    .hsub{font-size:.98rem;margin-top:16px}
+    .hchip{gap:10px;padding:10px 14px;flex-wrap:wrap;justify-content:center;margin-top:22px}
+    .hchip .hprice{font-size:1.12rem}
+    .cta-row{gap:10px}
+    .cta-row .btn{width:100%;justify-content:center}
+    .htrust{font-size:.72rem}
+  }
 </style>
 </head>
 <body>
@@ -380,7 +404,7 @@
         <div class="mk-v" id="ethPrice">—</div>
         <div class="mk-sub" id="ethChg">24h —</div>
       </div>
-      <div class="mk-stat">
+      <div class="mk-stat mk-gold">
         <div class="mk-k"><span class="mk-dot"></span>Gold · XAU/USD</div>
         <div class="mk-v" id="xauPrice">—</div>
         <div class="mk-sub" id="xauSub">USD per ounce</div>
@@ -760,6 +784,17 @@
         if(cur<target) requestAnimationFrame(tick); })();
     } else { el.textContent='Live'; }
   }).catch(function(){ el.textContent='Live'; });
+})();
+</script>
+<script>
+/* scroll reveal for dashboard + sections (graceful if unsupported) */
+(function(){
+  if(!('IntersectionObserver' in window)) return;
+  try{
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+    var sel='section.block .mk-stat, section.block .mk-panel, section.block .tool, section.block h2, section.block .eyebrow, section.block .lead, section.block .signup, section.block .disc';
+    document.querySelectorAll(sel).forEach(function(el){ el.classList.add('reveal-up'); io.observe(el); });
+  }catch(e){}
 })();
 </script>
 </body>
