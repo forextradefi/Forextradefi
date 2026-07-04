@@ -30,6 +30,10 @@ export default {
       return handleSubscribe(request, env);
     }
 
+    if (url.pathname === '/api/calendar') {
+      return handleCalendar(request, ctx);
+    }
+
     // With html_handling = "none", assets are served at their literal path
     // (so /journal.html etc. keep working). Map the bare root to index.html.
     if (url.pathname === '/') {
@@ -40,6 +44,57 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
+
+/**
+ * Economic calendar. Pulls this week's events from Forex Factory's public
+ * data feed (faireconomy) server-side, so the browser can render its own
+ * dark, filterable calendar. Each event has an `impact` of High/Medium/Low
+ * (or Holiday). Edge-cached for 30 minutes.
+ */
+async function handleCalendar(request, ctx) {
+  if (request.method !== 'GET') {
+    return jsonResponse({ error: 'method_not_allowed', events: [] }, 405, {
+      'cache-control': 'no-store',
+    });
+  }
+
+  const cache = caches.default;
+  const cacheKey = new Request(new URL('/api/calendar', request.url).toString(), {
+    method: 'GET',
+  });
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(
+      'https://nfs.faireconomy.media/ff_calendar_thisweek.json',
+      {
+        headers: { 'user-agent': 'ForexTradeFi/1.0 (+https://forextradefi.com)' },
+        cf: { cacheTtl: 1800, cacheEverything: true },
+      },
+    );
+    if (!res.ok) throw new Error('feed ' + res.status);
+    const data = await res.json();
+    const events = (Array.isArray(data) ? data : []).map((e) => ({
+      title: e.title || '',
+      country: e.country || '',
+      date: e.date || '',
+      impact: e.impact || '',
+      forecast: e.forecast || '',
+      previous: e.previous || '',
+      actual: e.actual || '',
+    }));
+    const response = jsonResponse({ events }, 200, {
+      'cache-control': 'public, max-age=1800',
+    });
+    ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    return response;
+  } catch (err) {
+    return jsonResponse({ error: 'calendar_failed', events: [] }, 502, {
+      'cache-control': 'no-store',
+    });
+  }
+}
 
 function jsonResponse(body, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(body), {

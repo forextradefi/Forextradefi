@@ -319,11 +319,24 @@
     .htrust{font-size:.72rem}
   }
 
-  /* economic calendar (Investing.com embed) */
-  .econcal{padding:0}
-  .econcal iframe{display:block;width:100%;border:0;background:#fff}
-  .econcal-by{font-size:.66rem;color:var(--muted);padding:8px 12px;font-family:'JetBrains Mono'}
-  .econcal-by a{color:var(--blue-bright)}
+  /* economic calendar (custom, Forex Factory data) */
+  .mk-cal-filters{display:flex;gap:6px;padding:12px 12px 6px;flex-wrap:wrap}
+  .mk-cf{font-family:'JetBrains Mono';font-size:.66rem;letter-spacing:.5px;color:var(--muted);background:rgba(255,255,255,.03);border:1px solid var(--panel-edge);border-radius:20px;padding:5px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:color .15s,border-color .15s,background .15s}
+  .mk-cf:hover{color:var(--white);border-color:var(--ring)}
+  .mk-cf.active{color:var(--white);border-color:var(--ring);background:rgba(46,123,255,.14)}
+  .cf-dot{width:7px;height:7px;border-radius:50%}
+  .cf-dot.h{background:#ff5260}.cf-dot.m{background:#e7b84e}.cf-dot.l{background:#7d8aa3}
+  .mk-cal{max-height:456px;overflow:auto;padding:2px 2px 8px}
+  .cal-day{font-family:'JetBrains Mono';font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue-bright);padding:12px 12px 6px;position:sticky;top:0;background:var(--panel);z-index:1}
+  .cal-row{display:grid;grid-template-columns:50px 38px 10px 1fr auto;gap:9px;align-items:center;padding:9px 12px;border-top:1px solid rgba(22,32,58,.5);font-size:.82rem}
+  .cal-time{font-family:'JetBrains Mono';font-size:.72rem;color:var(--muted)}
+  .cal-cur{font-family:'JetBrains Mono';font-weight:700;font-size:.72rem;color:var(--silver)}
+  .cal-imp{width:8px;height:8px;border-radius:50%}
+  .cal-imp.h{background:#ff5260}.cal-imp.m{background:#e7b84e}.cal-imp.l{background:#7d8aa3}.cal-imp.x{background:#3a4a63}
+  .cal-title{color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cal-vals{font-family:'JetBrains Mono';font-size:.68rem;color:var(--muted);white-space:nowrap}
+  .cal-vals b{color:var(--up)}
+  @media(max-width:520px){.cal-vals{display:none}.cal-row{grid-template-columns:48px 34px 10px 1fr}}
 </style>
 </head>
 <body>
@@ -441,11 +454,14 @@
         </div>
       </div>
       <div class="mk-panel">
-        <div class="mk-panel-h">Economic calendar <span class="mk-tag">This week</span></div>
-        <div class="econcal">
-          <iframe src="https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&amp;features=datepicker,timezone&amp;countries=25,32,6,37,72,22,17,39,14,10,35,43,56,36,110,11,26,12,4,5&amp;calType=week&amp;timeZone=55&amp;lang=1" width="100%" height="500" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" title="Economic calendar"></iframe>
-          <div class="econcal-by">Real-time economic calendar provided by <a href="https://www.investing.com/" rel="nofollow noopener" target="_blank">Investing.com</a>.</div>
+        <div class="mk-panel-h">Economic calendar <span class="mk-tag">This week · your timezone</span></div>
+        <div class="mk-cal-filters" id="calFilters">
+          <button class="mk-cf active" data-imp="High"><span class="cf-dot h"></span>High</button>
+          <button class="mk-cf" data-imp="Medium"><span class="cf-dot m"></span>Medium</button>
+          <button class="mk-cf" data-imp="Low"><span class="cf-dot l"></span>Low</button>
+          <button class="mk-cf" data-imp="All">All</button>
         </div>
+        <div class="mk-cal" id="calBox"><div class="mk-loading">Loading calendar…</div></div>
       </div>
     </div>
 
@@ -805,6 +821,46 @@
     var sel='section.block .mk-stat, section.block .mk-panel, section.block .tool, section.block h2, section.block .eyebrow, section.block .lead, section.block .signup, section.block .disc';
     document.querySelectorAll(sel).forEach(function(el){ el.classList.add('reveal-up'); io.observe(el); });
   }catch(e){}
+})();
+</script>
+<script>
+/* Economic calendar (Forex Factory data via /api/calendar) with impact filter */
+(function(){
+  var box=document.getElementById('calBox'); if(!box) return;
+  var filters=document.getElementById('calFilters');
+  var all=[], active='High';
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function fmtTime(d){try{return new Date(d).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
+  function fmtDay(d){try{return new Date(d).toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'});}catch(e){return '';}}
+  function ic(i){return i==='High'?'h':i==='Medium'?'m':i==='Low'?'l':'x';}
+  function render(){
+    var list = active==='All' ? all : all.filter(function(e){return e.impact===active;});
+    if(!list.length){ box.innerHTML='<div class="mk-empty">No '+(active==='All'?'':active.toLowerCase()+'-impact ')+'events this week.</div>'; return; }
+    var html='', lastDay='';
+    list.forEach(function(e){
+      var day=fmtDay(e.date);
+      if(day&&day!==lastDay){ html+='<div class="cal-day">'+day+'</div>'; lastDay=day; }
+      html+='<div class="cal-row">'+
+        '<span class="cal-time">'+fmtTime(e.date)+'</span>'+
+        '<span class="cal-cur">'+esc(e.country)+'</span>'+
+        '<span class="cal-imp '+ic(e.impact)+'" title="'+esc(e.impact)+'"></span>'+
+        '<span class="cal-title">'+esc(e.title)+'</span>'+
+        '<span class="cal-vals">'+(e.actual?('<b>'+esc(e.actual)+'</b> '):'')+(e.forecast?('F '+esc(e.forecast)):'')+(e.previous?(' \u00b7 P '+esc(e.previous)):'')+'</span>'+
+      '</div>';
+    });
+    box.innerHTML=html;
+  }
+  if(filters) filters.addEventListener('click',function(ev){
+    var b=ev.target.closest('.mk-cf'); if(!b) return;
+    active=b.getAttribute('data-imp');
+    [].forEach.call(filters.querySelectorAll('.mk-cf'),function(x){x.classList.toggle('active',x===b);});
+    render();
+  });
+  fetch('/api/calendar').then(function(r){return r.json();}).then(function(d){
+    all=(d&&d.events)||[];
+    all.sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+    render();
+  }).catch(function(){ box.innerHTML='<div class="mk-empty">Couldn\'t load the calendar right now.</div>'; });
 })();
 </script>
 </body>
