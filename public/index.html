@@ -733,10 +733,16 @@
   const others=CUR.filter(c=>c!=='USD').join(',');
   const ago=new Date(); ago.setDate(ago.getDate()-7);
   const past=ago.toISOString().slice(0,10);
-  Promise.all([
-    fetch('https://api.frankfurter.app/latest?from=USD&to='+others).then(r=>r.json()),
-    fetch('https://api.frankfurter.app/'+past+'?from=USD&to='+others).then(r=>r.json())
-  ]).then(([now,old])=>{
+  function fxRates(when){
+    // try the current host, then the legacy host
+    var a='https://api.frankfurter.dev/v1/'+when+'?base=USD&symbols='+others;
+    var b='https://api.frankfurter.app/'+when+'?from=USD&to='+others;
+    return fetch(a).then(function(r){return r.ok?r.json():Promise.reject();})
+      .then(function(d){ if(d&&d.rates) return d; throw 0; })
+      .catch(function(){ return fetch(b).then(function(r){return r.json();}); });
+  }
+  Promise.all([ fxRates('latest'), fxRates(past) ]).then(([now,old])=>{
+    if(!now||!now.rates||!old||!old.rates) throw 0;
     const Rn=Object.assign({USD:1},now.rates), Ro=Object.assign({USD:1},old.rates);
     const scores=CUR.map(X=>{ let s=0,n=0;
       CUR.forEach(Y=>{ if(Y===X) return;
